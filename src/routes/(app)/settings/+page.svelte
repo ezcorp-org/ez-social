@@ -1,30 +1,13 @@
 <script lang="ts">
   import type { LayoutData } from "../$types";
   import { theme, type ThemePreference } from "$lib/stores/theme";
-  import { toasts } from "$lib/stores/toast";
-
   let { data }: { data: LayoutData } = $props();
   let activeTab = $state<"appearance" | "integrations">("appearance");
-  let selectedModel = $state(data.preferredModel);
 
   const tabs = [
     { id: "appearance" as const, label: "Appearance" },
     { id: "integrations" as const, label: "Integrations" },
   ];
-
-  async function saveModel(model: string) {
-    selectedModel = model;
-    const res = await fetch("/settings/model", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model }),
-    });
-    if (res.ok) {
-      toasts.add("Model updated", "success");
-    } else {
-      toasts.add("Failed to save model", "error");
-    }
-  }
 
   function setTheme(value: string) {
     theme.set(value as ThemePreference);
@@ -75,20 +58,6 @@
           </label>
         {/each}
       </fieldset>
-    </div>
-
-    <div>
-      <h2 class="text-lg font-semibold text-primary">AI Model</h2>
-      <p class="mt-1 text-sm text-secondary">Select the model used for generating draft replies.</p>
-      <select
-        value={selectedModel}
-        onchange={(e) => saveModel(e.currentTarget.value)}
-        class="mt-3 rounded-lg border border-border-input bg-surface px-3 py-2 text-sm text-primary"
-      >
-        {#each data.availableModels as model}
-          <option value={model.id}>{model.label}</option>
-        {/each}
-      </select>
     </div>
   </div>
 {:else if activeTab === "integrations"}

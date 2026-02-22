@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { authenticate, gotoDashboard } from "./helpers";
+import { interceptChatWithDraft } from "./mocks/ai";
 
 // Helper: add a post via the QuickAdd form and get its ID
 // Since the scraper won't work in test, we add content manually after
@@ -75,6 +76,9 @@ test.describe("Auto-generate reply flow", () => {
   test("autoGenerate=true sends default message and cleans URL", async ({ page }) => {
     const postId = await addPostWithContent(page, "https://example.com/post/2");
 
+    // Mock AI chat response to avoid real API calls
+    await interceptChatWithDraft(page, "Mock reply for auto-generate test.");
+
     // Navigate with autoGenerate param
     await page.goto(`/queue/${postId}?autoGenerate=true`);
 
@@ -89,6 +93,9 @@ test.describe("Auto-generate reply flow", () => {
   test("autoGenerate with custom prompt sends that prompt", async ({ page }) => {
     const postId = await addPostWithContent(page, "https://example.com/post/3");
 
+    // Mock AI chat response to avoid real API calls
+    await interceptChatWithDraft(page, "Mock polite disagreement reply.");
+
     // Navigate with autoGenerate + custom prompt
     await page.goto(`/queue/${postId}?autoGenerate=true&prompt=${encodeURIComponent("disagree politely")}`);
 
@@ -102,6 +109,9 @@ test.describe("Auto-generate reply flow", () => {
 
   test("refresh after auto-generate does not re-trigger", async ({ page }) => {
     const postId = await addPostWithContent(page, "https://example.com/post/4");
+
+    // Mock AI chat response to avoid real API calls
+    await interceptChatWithDraft(page, "Mock reply for refresh test.");
 
     // Navigate with autoGenerate
     await page.goto(`/queue/${postId}?autoGenerate=true`);
@@ -138,6 +148,9 @@ test.describe("Auto-generate reply flow", () => {
 
   test("no console errors on autoGenerate page load", async ({ page }) => {
     const postId = await addPostWithContent(page, "https://example.com/post/6");
+
+    // Mock AI chat response to avoid real API calls
+    await interceptChatWithDraft(page, "Mock reply for console error test.");
 
     const errors: string[] = [];
     page.on("pageerror", (err) => errors.push(err.message));

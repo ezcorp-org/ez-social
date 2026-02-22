@@ -1,10 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { authenticate, addPost, navigateWithRetry, gotoDashboard } from "./helpers";
+import { interceptChatWithDraft } from "./mocks/ai";
 
 test.describe("Hotkey navigation", () => {
   test.beforeEach(async ({ page }) => {
     await authenticate(page);
     await gotoDashboard(page);
+    // Blur any focused form element so hotkeys aren't swallowed
+    await page.locator("h1").click();
   });
 
   test("pressing 'n' opens QuickAdd modal and auto-focuses URL input", async ({ page }) => {
@@ -131,6 +134,9 @@ test.describe("Hotkey navigation", () => {
   test("QuickAdd modal submission works from non-dashboard pages", async ({ page }) => {
     test.setTimeout(60000);
 
+    // Mock AI chat response in case autoGenerate triggers
+    await interceptChatWithDraft(page, "Mock reply for hotkey submission test.");
+
     // First add a post so we have a queue page to navigate to
     const postId = await addPost(page, "https://example.com/hotkey-submit-test");
 
@@ -159,6 +165,9 @@ test.describe("Hotkey navigation", () => {
 
   test("QuickAdd from post page shows new post context and auto-generates", async ({ page }) => {
     test.setTimeout(90000);
+
+    // Mock AI chat response for autoGenerate
+    await interceptChatWithDraft(page, "Mock reply for auto-generate hotkey test.");
 
     // Create first post
     const firstPostId = await addPost(page, "https://example.com/first-post");

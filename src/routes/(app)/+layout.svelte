@@ -6,10 +6,24 @@
   import { signOut } from "@auth/sveltekit/client";
   import { goto } from "$app/navigation";
   import { tick } from "svelte";
+  import { toasts } from "$lib/stores/toast";
 
   let { data, children }: { data: LayoutData; children: Snippet } = $props();
   let mobileMenuOpen = $state(false);
   let quickAddOpen = $state(false);
+  let selectedModel = $state(data.preferredModel);
+
+  async function saveModel(model: string) {
+    selectedModel = model;
+    const res = await fetch("/settings/model", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model }),
+    });
+    if (!res.ok) {
+      toasts.add("Failed to save model", "error");
+    }
+  }
 
   async function handleKeydown(event: KeyboardEvent) {
     // Escape closes the modal regardless of focus
@@ -68,6 +82,15 @@
         >
           Personas
         </a>
+        <select
+          value={selectedModel}
+          onchange={(e) => saveModel(e.currentTarget.value)}
+          class="rounded border border-border-input bg-surface px-2 py-1 text-xs text-secondary"
+        >
+          {#each data.availableModels as model}
+            <option value={model.id}>{model.label}</option>
+          {/each}
+        </select>
         <a
           href="/settings"
           class="text-sm font-medium text-secondary hover:text-primary"
@@ -102,6 +125,15 @@
           >
             Personas
           </a>
+          <select
+            value={selectedModel}
+            onchange={(e) => saveModel(e.currentTarget.value)}
+            class="rounded border border-border-input bg-surface px-2 py-1 text-xs text-secondary w-fit"
+          >
+            {#each data.availableModels as model}
+              <option value={model.id}>{model.label}</option>
+            {/each}
+          </select>
           <a
             href="/settings"
             class="text-sm font-medium text-secondary hover:text-primary"

@@ -33,9 +33,9 @@ export async function authenticate(page: Page) {
     await expect(page.getByRole("button", { name: "Create account" })).toBeVisible({ timeout: 10000 });
     await waitForHydration(page);
 
+    await page.getByRole("textbox", { name: "Email address" }).fill(email);
     await page.getByRole("textbox", { name: "Password", exact: true }).fill(password);
     await page.getByRole("textbox", { name: "Confirm password" }).fill(password);
-    await page.getByRole("textbox", { name: "Email address" }).fill(email);
 
     // Verify fields were actually filled (page reload under load can clear them)
     await expect(page.getByRole("textbox", { name: "Email address" })).toHaveValue(email);
@@ -56,16 +56,11 @@ export async function authenticate(page: Page) {
       await page.getByRole("textbox", { name: "Password" }).fill(password);
       await expect(page.getByRole("textbox", { name: "Email address" })).toHaveValue(email);
       await page.getByRole("button", { name: "Sign in" }).click();
+      // Wait for navigation to dashboard — toPass handles timeout/retry
       await page.waitForFunction(
-        () => window.location.pathname === "/"
-          || document.querySelector('[class*="text-red"]') !== null
-          || document.body.textContent?.includes("Invalid email or password"),
-        { timeout: 10000 },
+        () => window.location.pathname === "/",
+        { timeout: 15000 },
       );
-      // If login failed, throw to trigger toPass retry with fresh credentials
-      if (page.url().includes("/login")) {
-        throw new Error("Login failed after registration — retrying");
-      }
     }
   }).toPass({ timeout: 45000, intervals: [2000] });
 }
