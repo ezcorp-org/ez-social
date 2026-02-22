@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@layer base {
+  button,
+  [role="button"],
+  summary {
+    cursor: pointer;
+  }
+}
+
+/* ── Design tokens: light mode (default) ── */
+:root {
+  --surface: var(--color-white);
+  --surface-alt: var(--color-gray-50);
+  --surface-dim: var(--color-gray-100);
+
+  --text-primary: var(--color-gray-900);
+  --text-secondary: var(--color-gray-600);
+  --text-muted: var(--color-gray-500);
+  --text-faint: var(--color-gray-400);
+  --text-on-primary: var(--color-white);
+
+  --border-main: var(--color-gray-200);
+  --border-subtle: var(--color-gray-100);
+  --border-input: var(--color-gray-300);
+
+  --btn: var(--color-gray-900);
+  --btn-hover: var(--color-gray-800);
+
+  /* Chat bubble colors */
+  --chat-user-bg: var(--color-gray-900);
+  --chat-user-text: var(--color-white);
+  --chat-asst-bg: var(--color-white);
+  --chat-asst-text: var(--color-gray-900);
+  --chat-asst-border: var(--color-gray-200);
+
+  /* Status colors */
+  --status-info-bg: var(--color-blue-50);
+  --status-info-border: var(--color-blue-200);
+  --status-info-text: var(--color-blue-700);
+
+  --status-warning-bg: var(--color-amber-50);
+  --status-warning-border: var(--color-amber-200);
+  --status-warning-text: var(--color-amber-700);
+
+  --status-success-bg: var(--color-green-50);
+  --status-success-border: var(--color-green-200);
+  --status-success-text: var(--color-green-700);
+
+  --status-danger-bg: var(--color-red-50);
+  --status-danger-border: var(--color-red-200);
+  --status-danger-text: var(--color-red-700);
+
+  /* Draft block */
+  --draft-bg: var(--color-blue-50);
+  --draft-border: var(--color-blue-200);
+  --draft-text: var(--color-blue-600);
+  --draft-text-dim: var(--color-blue-500);
+  --draft-text-faint: var(--color-blue-400);
+
+  /* Toast */
+  --toast-success-bg: var(--color-green-50);
+  --toast-success-border: var(--color-green-200);
+  --toast-success-text: var(--color-green-800);
+  --toast-error-bg: var(--color-red-50);
+  --toast-error-border: var(--color-red-200);
+  --toast-error-text: var(--color-red-800);
+  --toast-info-bg: var(--color-gray-50);
+  --toast-info-border: var(--color-gray-200);
+  --toast-info-text: var(--color-gray-800);
+}
+
+/* ── Design tokens: dark mode ── */
+.dark {
+  color-scheme: dark;
+
+  --surface: var(--color-gray-900);
+  --surface-alt: var(--color-gray-950);
+  --surface-dim: var(--color-gray-800);
+
+  --text-primary: var(--color-gray-100);
+  --text-secondary: var(--color-gray-400);
+  --text-muted: var(--color-gray-500);
+  --text-faint: var(--color-gray-500);
+  --text-on-primary: var(--color-gray-900);
+
+  --border-main: var(--color-gray-700);
+  --border-subtle: var(--color-gray-800);
+  --border-input: var(--color-gray-600);
+
+  --btn: var(--color-gray-100);
+  --btn-hover: var(--color-gray-200);
+
+  /* Chat bubble colors */
+  --chat-user-bg: var(--color-gray-100);
+  --chat-user-text: var(--color-gray-900);
+  --chat-asst-bg: var(--color-gray-800);
+  --chat-asst-text: var(--color-gray-100);
+  --chat-asst-border: var(--color-gray-700);
+
+  /* Status colors */
+  --status-info-bg: color-mix(in srgb, var(--color-blue-900) 30%, transparent);
+  --status-info-border: var(--color-blue-800);
+  --status-info-text: var(--color-blue-300);
+
+  --status-warning-bg: color-mix(in srgb, var(--color-amber-900) 30%, transparent);
+  --status-warning-border: var(--color-amber-800);
+  --status-warning-text: var(--color-amber-300);
+
+  --status-success-bg: color-mix(in srgb, var(--color-green-900) 30%, transparent);
+  --status-success-border: var(--color-green-800);
+  --status-success-text: var(--color-green-300);
+
+  --status-danger-bg: color-mix(in srgb, var(--color-red-900) 30%, transparent);
+  --status-danger-border: var(--color-red-800);
+  --status-danger-text: var(--color-red-300);
+
+  /* Draft block */
+  --draft-bg: color-mix(in srgb, var(--color-blue-900) 30%, transparent);
+  --draft-border: var(--color-blue-800);
+  --draft-text: var(--color-blue-400);
+  --draft-text-dim: var(--color-blue-500);
+  --draft-text-faint: var(--color-blue-500);
+
+  /* Toast */
+  --toast-success-bg: color-mix(in srgb, var(--color-green-900) 30%, transparent);
+  --toast-success-border: var(--color-green-800);
+  --toast-success-text: var(--color-green-300);
+  --toast-error-bg: color-mix(in srgb, var(--color-red-900) 30%, transparent);
+  --toast-error-border: var(--color-red-800);
+  --toast-error-text: var(--color-red-300);
+  --toast-info-bg: var(--color-gray-800);
+  --toast-info-border: var(--color-gray-700);
+  --toast-info-text: var(--color-gray-300);
+}
+
+/* ── Register tokens as Tailwind theme values ── */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-surface-dim: var(--surface-dim);
+
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-on-primary: var(--text-on-primary);
+
+  --color-border-main: var(--border-main);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-input: var(--border-input);
+
+  --color-btn: var(--btn);
+  --color-btn-hover: var(--btn-hover);
+
+  --color-chat-user-bg: var(--chat-user-bg);
+  --color-chat-user-text: var(--chat-user-text);
+  --color-chat-asst-bg: var(--chat-asst-bg);
+  --color-chat-asst-text: var(--chat-asst-text);
+  --color-chat-asst-border: var(--chat-asst-border);
+
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-border: var(--status-info-border);
+  --color-status-info-text: var(--status-info-text);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-border: var(--status-warning-border);
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-border: var(--status-success-border);
+  --color-status-success-text: var(--status-success-text);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-danger-border: var(--status-danger-border);
+  --color-status-danger-text: var(--status-danger-text);
+
+  --color-draft-bg: var(--draft-bg);
+  --color-draft-border: var(--draft-border);
+  --color-draft-text: var(--draft-text);
+  --color-draft-text-dim: var(--draft-text-dim);
+  --color-draft-text-faint: var(--draft-text-faint);
+
+  --color-toast-success-bg: var(--toast-success-bg);
+  --color-toast-success-border: var(--toast-success-border);
+  --color-toast-success-text: var(--toast-success-text);
+  --color-toast-error-bg: var(--toast-error-bg);
+  --color-toast-error-border: var(--toast-error-border);
+  --color-toast-error-text: var(--toast-error-text);
+  --color-toast-info-bg: var(--toast-info-bg);
+  --color-toast-info-border: var(--toast-info-border);
+  --color-toast-info-text: var(--toast-info-text);
+}

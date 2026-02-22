@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ezsocial
+      POSTGRES_PASSWORD: ezsocial
+      POSTGRES_DB: ezsocial
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ezsocial"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: oven/bun:1
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: postgresql://ezsocial:ezsocial@postgres:5432/ezsocial
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: bunx drizzle-kit push
+    restart: "no"
+
+  app:
+    image: oven/bun:1
+    working_dir: /app
+    volumes:
+      - .:/app
+      - app_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      DATABASE_URL: postgresql://ezsocial:ezsocial@postgres:5432/ezsocial
+      AUTH_SECRET: docker-dev-secret
+      AUTH_TRUST_HOST: "true"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: sh -c "bun install && bun run dev --host 0.0.0.0"
+
+volumes:
+  pgdata:
+  app_node_modules:

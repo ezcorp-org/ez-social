@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.svelte-kit/
+.env
+.env.local
+.wrangler/
+drizzle/meta/
+*.log
+.DS_Store
+worktrees/
+test-results/

@@ -1,0 +1,47 @@
+{
+  "name": "ez-social",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.45",
+    "@ai-sdk/svelte": "^4.0.91",
+    "@auth/drizzle-adapter": "^1",
+    "@auth/sveltekit": "^1",
+    "@cloudflare/puppeteer": "^1.0.6",
+    "@neondatabase/serverless": "^0",
+    "@sveltejs/kit": "^2",
+    "ai": "^6.0.91",
+    "drizzle-orm": "^0",
+    "svelte": "^5",
+    "zod": "^3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4",
+    "@playwright/test": "^1.58.2",
+    "@sveltejs/adapter-cloudflare": "^4",
+    "@sveltejs/adapter-static": "^3",
+    "@sveltejs/vite-plugin-svelte": "^5",
+    "@tailwindcss/vite": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "drizzle-kit": "^0",
+    "jsdom": "^28.1.0",
+    "pg": "^8.18.0",
+    "playwright": "^1.58.2",
+    "svelte-check": "^4",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^4.0.18"
+  }
+}
