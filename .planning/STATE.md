@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 Phase: 5 of 5 (Voice Calibration & Continuous Learning)
 Plan: 3 of 3 in current phase ✓
 Status: Complete
-Last activity: 2026-02-22 — Completed quick task 010: Token cost tracking per post
+Last activity: 2026-02-26 — Completed quick task 011: Allow users to manually edit their voice profile
 
 Progress: [████████████████] 100%
 
@@ -117,9 +117,10 @@ None.
 | 008 | Toast error notifications for QuickAdd | 2026-02-21 | 6b13a77 | [008-toast-error-notifications-quickadd](./quick/008-toast-error-notifications-quickadd/) |
 | 009 | Settings page with Integrations tab and theme | 2026-02-21 | 973458f | [009-settings-page-integrations-tab-theme](./quick/009-settings-page-integrations-tab-theme/) |
 | 010 | Token cost tracking per post | 2026-02-22 | 93045d9 | [010-token-cost-tracking-per-post](./quick/010-token-cost-tracking-per-post/) |
+| 011 | Allow users to manually edit their voice profile | 2026-02-26 | d5d1f00 | [011-allow-users-to-manually-edit-their-perso](./quick/011-allow-users-to-manually-edit-their-perso/) |
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Completed quick task 010: Token cost tracking per post
+Last session: 2026-02-26
+Stopped at: Completed quick task 011: Allow users to manually edit their voice profile
 Resume file: None
