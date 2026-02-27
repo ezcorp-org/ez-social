@@ -13,7 +13,7 @@ function baseContext() {
       postContent: "This is the original post content",
       postAuthor: "testuser",
     },
-    persona: { name: "TestPersona" },
+    persona: { name: "TestPersona" } as { name: string; description?: string | null },
     voiceProfile: null as { extractedProfile: unknown; manualEdits: unknown } | null,
     platformVoiceProfile: undefined as
       | { extractedProfile: unknown; manualEdits: unknown; platform: string }
@@ -47,7 +47,7 @@ function newSchemaProfile() {
         exampleQuote: "Nah, the real issue is...",
       },
     ],
-    inconsistencies: [],
+    inconsistencies: [] as { description: string; contextA: string; contextB: string; assessment: string }[],
     recommendations: {
       leanInto: ["Punchy openings"],
       watchOutFor: ["Overusing em-dashes"],
@@ -86,6 +86,21 @@ describe("buildChatSystemPrompt", () => {
   it("includes persona name when provided", () => {
     const prompt = buildChatSystemPrompt(baseContext());
     expect(prompt).toContain('persona "TestPersona"');
+  });
+
+  it("includes persona description when provided", () => {
+    const ctx = baseContext();
+    ctx.persona = { name: "TestPersona", description: "A snarky tech commentator" };
+    const prompt = buildChatSystemPrompt(ctx);
+    expect(prompt).toContain("A snarky tech commentator");
+  });
+
+  it("omits persona description when not provided", () => {
+    const ctx = baseContext();
+    ctx.persona = { name: "TestPersona", description: null };
+    const prompt = buildChatSystemPrompt(ctx);
+    expect(prompt).toContain('persona "TestPersona"');
+    expect(prompt).not.toContain("null");
   });
 
   it("omits persona reference when persona is null", () => {
@@ -139,15 +154,24 @@ describe("buildChatSystemPrompt", () => {
 
   it("includes reply templates", () => {
     const prompt = buildChatSystemPrompt(baseContext());
-    expect(prompt).toContain("Value-add");
-    expect(prompt).toContain("Respectful disagreement");
-    expect(prompt).toContain("Sharp follow-up");
+    expect(prompt).toContain("Agree & extend");
+    expect(prompt).toContain("Fresh angle");
+    expect(prompt).toContain("Sharp question");
   });
 
   it("includes validation checklist", () => {
     const prompt = buildChatSystemPrompt(baseContext());
     expect(prompt).toContain("Validation Checklist");
     expect(prompt).toContain("real person, not a brand");
+    expect(prompt).toContain("ZERO banned words");
+  });
+
+  it("includes banned words and punctuation section", () => {
+    const prompt = buildChatSystemPrompt(baseContext());
+    expect(prompt).toContain("Banned Words & Punctuation");
+    expect(prompt).toContain('"honestly"');
+    expect(prompt).toContain("em-dashes");
+    expect(prompt).toContain("NEVER use em-dashes");
   });
 
   // ── Draft format ──
@@ -187,7 +211,7 @@ describe("buildChatSystemPrompt", () => {
     // Should contain voice guardrails
     expect(prompt).toContain("Voice Guardrails");
     expect(prompt).toContain("Punchy openings");
-    expect(prompt).toContain("Overusing em-dashes");
+    expect(prompt).toContain("NEVER do: Overusing em-dashes");
 
     // Should NOT contain raw JSON
     expect(prompt).not.toContain('"voiceDNA"');
@@ -258,6 +282,93 @@ describe("buildChatSystemPrompt", () => {
 
     const prompt = buildChatSystemPrompt(ctx);
     expect(prompt).not.toContain("## Voice Profile");
+  });
+
+  // ── Full persona context (description + voice profile) ──
+
+  it("includes both persona description and voice profile in prompt", () => {
+    const ctx = baseContext();
+    ctx.persona = { name: "SnarkyDev", description: "A cynical senior engineer who roasts bad takes" };
+    ctx.voiceProfile = {
+      extractedProfile: newSchemaProfile(),
+      manualEdits: null,
+    };
+
+    const prompt = buildChatSystemPrompt(ctx);
+
+    // Persona description appears in role definition
+    expect(prompt).toContain("A cynical senior engineer who roasts bad takes");
+    expect(prompt).toContain('persona "SnarkyDev"');
+
+    // Voice profile still appears
+    expect(prompt).toContain("Voice DNA");
+    expect(prompt).toContain("Short punchy sentences");
+  });
+
+  // ── Voice profile: inconsistencies as hard constraints ──
+
+  it("renders inconsistencies with elimination language as hard constraints", () => {
+    const ctx = baseContext();
+    const profile = newSchemaProfile();
+    profile.inconsistencies = [
+      {
+        description: "Occasional use of 'Honestly' as a sentence opener despite user instruction to never say it",
+        contextA: "User instruction to never say honestly",
+        contextB: "Multiple organic posts",
+        assessment: "Legacy habit that needs active elimination.",
+      },
+      {
+        description: "Sometimes uses filler phrases",
+        contextA: "Formal posts",
+        contextB: "Seen in longer posts",
+        assessment: "Minor stylistic variance, not a concern.",
+      },
+    ];
+    ctx.voiceProfile = { extractedProfile: profile, manualEdits: null };
+
+    const prompt = buildChatSystemPrompt(ctx);
+
+    expect(prompt).toContain("### Hard Constraints (NEVER do these)");
+    expect(prompt).toContain("Occasional use of 'Honestly'");
+    // Non-elimination inconsistencies should NOT appear
+    expect(prompt).not.toContain("Sometimes uses filler phrases");
+  });
+
+  it("omits hard constraints section when no inconsistencies match elimination language", () => {
+    const ctx = baseContext();
+    const profile = newSchemaProfile();
+    profile.inconsistencies = [
+      {
+        description: "Minor style drift",
+        contextA: "Some context",
+        contextB: "Rare",
+        assessment: "Not a problem.",
+      },
+    ];
+    ctx.voiceProfile = { extractedProfile: profile, manualEdits: null };
+
+    const prompt = buildChatSystemPrompt(ctx);
+    expect(prompt).not.toContain("Hard Constraints");
+  });
+
+  it("uses updated voice profile data when profile changes", () => {
+    const ctx = baseContext();
+    ctx.persona = { name: "TestPersona" } as { name: string; description?: string | null };
+
+    // Simulate version 2 with different voice DNA
+    const updatedProfile = newSchemaProfile();
+    updatedProfile.voiceDNA = ["Long philosophical musings", "Never uses contractions"];
+    ctx.voiceProfile = {
+      extractedProfile: updatedProfile,
+      manualEdits: null,
+    };
+
+    const prompt = buildChatSystemPrompt(ctx);
+
+    // Should contain the UPDATED voice DNA, not the old one
+    expect(prompt).toContain("Long philosophical musings");
+    expect(prompt).toContain("Never uses contractions");
+    expect(prompt).not.toContain("Short punchy sentences");
   });
 
   // ── Platform hint ──

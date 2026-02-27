@@ -15,7 +15,11 @@
 
   const post = $derived(data.post);
   const personas = $derived(
-    data.personas.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name })),
+    data.personas.map((p: { id: string; name: string; voiceVersion?: number | null }) => ({
+      id: p.id,
+      name: p.name,
+      voiceVersion: p.voiceVersion ?? null,
+    })),
   );
 
   let showContentForm = $state(false);

@@ -60,6 +60,7 @@ export const POST: RequestHandler = async ({
 
   // Load persona, voice profile, and platform-specific override
   let personaName: string | null = null;
+  let personaDescription: string | null = null;
   let voiceProfile: {
     extractedProfile: unknown;
     manualEdits: unknown;
@@ -72,7 +73,10 @@ export const POST: RequestHandler = async ({
 
   if (personaId) {
     const persona = await personaService.getById(userId, personaId);
-    if (persona) personaName = persona.name;
+    if (persona) {
+      personaName = persona.name;
+      personaDescription = persona.description;
+    }
 
     // Load default voice profile
     const activeVersion = await voiceService.getActiveVersion(personaId);
@@ -126,7 +130,7 @@ export const POST: RequestHandler = async ({
       postContent: post.postContent,
       postAuthor: post.postAuthor,
     },
-    persona: personaName ? { name: personaName } : null,
+    persona: personaName ? { name: personaName, description: personaDescription } : null,
     voiceProfile,
     platformVoiceProfile,
   });

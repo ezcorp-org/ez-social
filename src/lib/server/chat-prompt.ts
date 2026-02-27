@@ -12,7 +12,7 @@ interface ChatPromptContext {
     postContent: string | null;
     postAuthor: string | null;
   };
-  persona: { name: string } | null;
+  persona: { name: string; description?: string | null } | null;
   voiceProfile: {
     extractedProfile: unknown;
     manualEdits: unknown;
@@ -105,13 +105,25 @@ function formatVoiceProfile(profile: VoiceProfile): string {
     const rec = profile.recommendations;
     const parts: string[] = [];
     if (rec.leanInto?.length) {
-      parts.push(`Lean into: ${rec.leanInto.join("; ")}`);
+      parts.push(`DO more of: ${rec.leanInto.join("; ")}`);
     }
     if (rec.watchOutFor?.length) {
-      parts.push(`Watch out for: ${rec.watchOutFor.join("; ")}`);
+      parts.push(`NEVER do: ${rec.watchOutFor.join("; ")}`);
     }
     if (parts.length) {
       sections.push(`### Voice Guardrails\n${parts.join("\n")}`);
+    }
+  }
+
+  // Inconsistencies flagged for elimination → render as hard constraints
+  if (profile.inconsistencies?.length) {
+    const eliminations = profile.inconsistencies
+      .filter((i) => /eliminat|remove|never|avoid|ban/i.test(i.assessment))
+      .map((i) => `- ${i.description}`);
+    if (eliminations.length) {
+      sections.push(
+        `### Hard Constraints (NEVER do these)\n${eliminations.join("\n")}`,
+      );
     }
   }
 
@@ -127,10 +139,10 @@ const REPLY_RULES = `## Reply Rules
 
 ### Value-Add Requirement
 Every reply MUST include at least one of:
-- A specific data point, fact, or reference
-- A contrarian or non-obvious angle
+- A specific data point, fact, or lived experience that extends the point
+- A fresh angle or reframe the audience hasn't considered
+- A practical insight, tip, or actionable takeaway
 - A sharp follow-up question that advances the conversation
-- A practical insight or actionable takeaway
 
 ### Anti-Patterns (NEVER do these)
 - "Great post!", "This.", "100%", "So true!", "Couldn't agree more"
@@ -139,23 +151,31 @@ Every reply MUST include at least one of:
 - Generic compliments or engagement farming
 - Product pitching or self-promotion in replies
 
+### Banned Words & Punctuation
+NEVER use these in draft replies. They are telltale AI-isms that make replies sound fake:
+- Words: "honestly", "frankly", "literally", "actually" (as filler), "utilize", "leverage", "delve", "tapestry", "landscape", "nuance", "robust", "streamline", "arguably", "essentially", "fundamentally"
+- Phrases: "it's worth noting", "at the end of the day", "the reality is", "I think it's fair to say", "to be fair", "hot take:", "unpopular opinion:"
+- Punctuation: em-dashes (—). Use commas, periods, or semicolons instead. NEVER use em-dashes.
+- Formatting: Do not start replies with "I" unless the writer's voice profile specifically favors it
+
 ### Reply Format
 - 1-3 sentences. Brevity is a feature.
 - No hashtags in replies unless the writer's voice specifically uses them
 - Platform-appropriate length (shorter for Twitter/X, can be longer for LinkedIn/Reddit)
 
 ### Reply Templates (choose the right one for context)
-1. **Value-add**: Share a specific data point, example, or resource that extends the original point
-2. **Respectful disagreement**: Acknowledge the point, then offer a specific counter-example or alternative framing
-3. **Add-what-they-missed**: Point out a blind spot or overlooked angle with evidence
-4. **Sharp follow-up**: Ask a specific question that pushes the conversation deeper
-5. **Quick win**: Share a concrete tip, tool, or approach the audience can use immediately
+1. **Agree & extend**: Build on the point with a supporting example, data point, or related experience
+2. **Fresh angle**: Offer a reframe or perspective the author/audience hasn't considered
+3. **Lived experience**: Share a brief, relevant story that reinforces or nuances the point
+4. **Sharp question**: Ask a specific question that deepens the conversation
+5. **Quick win**: Share a concrete tip, tool, or resource the audience can use immediately
 
 ### Validation Checklist
 Before outputting any draft reply, verify:
 - Sounds like a real person, not a brand or bot
-- Has "breathing room" — not trying to say too much
+- Has "breathing room" -- not trying to say too much
 - Free of engagement farming ("Who else thinks...", "Tag someone who...")
+- Contains ZERO banned words/punctuation from the list above
 - Passes the "would I actually post this?" test`;
 
 export function buildChatSystemPrompt(context: ChatPromptContext): string {
@@ -164,8 +184,11 @@ export function buildChatSystemPrompt(context: ChatPromptContext): string {
   const sections: string[] = [];
 
   // ── Role definition ──
+  const personaIntro = persona
+    ? ` in the voice of their persona "${persona.name}"${persona.description ? ` (${persona.description})` : ""}`
+    : "";
   sections.push(
-    `You are a social media reply assistant. You help the user craft authentic replies${persona ? ` in the voice of their persona "${persona.name}"` : ""}. You can discuss the post, brainstorm angles, and generate draft replies when asked.`,
+    `You are a social media reply assistant. You help the user craft authentic replies${personaIntro}. You can discuss the post, brainstorm angles, and generate draft replies when asked.`,
   );
 
   // ── Original post context ──
@@ -215,7 +238,7 @@ export function buildChatSystemPrompt(context: ChatPromptContext): string {
     : "Keep drafts concise and appropriate for the platform.";
 
   sections.push(
-    `## Behavior\n- Be responsive to both discussion requests and draft requests — no rigid flow.\n- When asked to refine a draft ("make it shorter", "more casual"), generate a new <draft> block with the updated version.\n- ${platformHint}\n- When the user wants to explore angles or discuss the post, respond conversationally without draft markers.`,
+    `## Behavior\n- Be responsive to both discussion requests and draft requests — no rigid flow.\n- When asked to refine a draft ("make it shorter", "more casual"), generate a new <draft> block with the updated version.\n- ${platformHint}\n- When the user wants to explore angles or discuss the post, respond conversationally without draft markers.\n- Prioritize replies that make the original author want to respond back. Agreement with added value drives more engagement than contradiction.`,
   );
 
   return sections.join("\n\n");

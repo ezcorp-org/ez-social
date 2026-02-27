@@ -27,16 +27,19 @@ export function createPersonaService(db: Db) {
         .filter((id): id is string => id !== null);
 
       let voiceSummaries = new Map<string, string>();
+      let voiceVersionNumbers = new Map<string, number>();
       if (versionIds.length > 0) {
         const versions = await db
           .select({
             id: voiceProfileVersions.id,
+            version: voiceProfileVersions.version,
             extractedProfile: voiceProfileVersions.extractedProfile,
           })
           .from(voiceProfileVersions)
           .where(sql`${voiceProfileVersions.id} IN ${versionIds}`);
 
         for (const v of versions) {
+          voiceVersionNumbers.set(v.id, v.version);
           const profile = v.extractedProfile as Record<string, unknown> | null;
           if (profile?.summary) {
             voiceSummaries.set(v.id, profile.summary as string);
@@ -44,11 +47,14 @@ export function createPersonaService(db: Db) {
         }
       }
 
-      return personaRows.map((p): Persona & { voiceSummary: string | undefined } => ({
+      return personaRows.map((p): Persona & { voiceSummary: string | undefined; voiceVersion: number | null } => ({
         ...p,
         voiceSummary: p.activeVoiceVersionId
           ? voiceSummaries.get(p.activeVoiceVersionId)
           : undefined,
+        voiceVersion: p.activeVoiceVersionId
+          ? voiceVersionNumbers.get(p.activeVoiceVersionId) ?? null
+          : null,
       }));
     },
 

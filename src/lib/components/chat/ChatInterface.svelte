@@ -32,7 +32,7 @@
   }: {
     postId: string;
     initialMessages: ServerMessage[];
-    personas: Array<{ id: string; name: string }>;
+    personas: Array<{ id: string; name: string; voiceVersion: number | null }>;
     activePersonaId: string | null;
     draftEdits?: DraftEditData[];
     autoGenerate?: boolean;
@@ -114,8 +114,9 @@
     currentPersonaId = personaId;
 
     // Show transient notification
-    const name = personas.find((p) => p.id === personaId)?.name ?? "Unknown";
-    switchNotification = `Now replying as ${name}`;
+    const p = personas.find((p) => p.id === personaId);
+    const label = p ? `${p.name}${p.voiceVersion ? ` v${p.voiceVersion}` : ''}` : "Unknown";
+    switchNotification = `Now replying as ${label}`;
 
     if (switchTimeout) clearTimeout(switchTimeout);
     switchTimeout = setTimeout(() => {
