@@ -35,8 +35,33 @@ function tweetPath(targetUrl: string): string | null {
   }
 }
 
+/** Extract article text from FxTwitter article blocks. */
+function extractArticleText(
+  article: FxTwitterArticle | undefined,
+): string | null {
+  if (!article?.content?.blocks?.length) return null;
+  const parts: string[] = [];
+  if (article.title) parts.push(article.title);
+  for (const block of article.content.blocks) {
+    const text = block.text?.trim();
+    if (!text) continue;
+    // Prefix headings with markdown-style markers for readability
+    if (block.type === "header-one") parts.push(`# ${text}`);
+    else if (block.type === "header-two") parts.push(`## ${text}`);
+    else if (block.type === "header-three") parts.push(`### ${text}`);
+    else parts.push(text);
+  }
+  return parts.length > 0 ? parts.join("\n\n") : null;
+}
+
+interface FxTwitterArticle {
+  title?: string;
+  content?: { blocks?: Array<{ type?: string; text?: string }> };
+}
+
 /**
  * Try the FxTwitter API first — it returns the full, untruncated tweet text.
+ * For X Articles, extracts content from the article blocks.
  * Falls back to the oEmbed API which truncates long tweets.
  */
 export async function scrapeTwitter(
@@ -51,14 +76,23 @@ export async function scrapeTwitter(
       });
       if (res.ok) {
         const data = (await res.json()) as {
-          tweet?: { text?: string; author?: { name?: string } };
+          tweet?: {
+            text?: string;
+            author?: { name?: string };
+            article?: FxTwitterArticle;
+          };
         };
+        const author = data.tweet?.author?.name || undefined;
+
+        // Check for article content first (X Articles have empty tweet.text)
+        const articleText = extractArticleText(data.tweet?.article);
+        if (articleText) {
+          return { content: articleText, author };
+        }
+
         const text = data.tweet?.text?.trim();
         if (text) {
-          return {
-            content: text,
-            author: data.tweet?.author?.name || undefined,
-          };
+          return { content: text, author };
         }
       }
     } catch {

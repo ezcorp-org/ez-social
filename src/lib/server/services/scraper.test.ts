@@ -109,6 +109,68 @@ describe("scrapeTwitter", () => {
     );
   });
 
+  it("extracts X Article content from FxTwitter article blocks", async () => {
+    const fxResponse = {
+      tweet: {
+        text: "",
+        author: { name: "Thariq" },
+        article: {
+          title: "Lessons from Building Claude Code",
+          content: {
+            blocks: [
+              { type: "unstyled", text: "First paragraph of the article." },
+              {
+                type: "header-one",
+                text: "Improving Elicitation",
+              },
+              {
+                type: "unstyled",
+                text: "When building the AskUserQuestion tool...",
+              },
+              { type: "header-two", text: "Attempt #1" },
+              { type: "unstyled", text: "The first thing we tried..." },
+              { type: "unstyled", text: "" },
+            ],
+          },
+        },
+      },
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(fxResponse), { status: 200 }),
+    );
+
+    const result = await scrapeTwitter("https://x.com/trq212/status/123");
+
+    expect(result).not.toBeNull();
+    expect(result!.author).toBe("Thariq");
+    expect(result!.content).toContain("Lessons from Building Claude Code");
+    expect(result!.content).toContain("# Improving Elicitation");
+    expect(result!.content).toContain("## Attempt #1");
+    expect(result!.content).toContain("First paragraph of the article.");
+    expect(result!.content).not.toContain("\n\n\n"); // empty blocks skipped
+  });
+
+  it("prefers article content over empty tweet text", async () => {
+    const fxResponse = {
+      tweet: {
+        text: "",
+        author: { name: "Author" },
+        article: {
+          title: "My Article",
+          content: {
+            blocks: [{ type: "unstyled", text: "Article body." }],
+          },
+        },
+      },
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(fxResponse), { status: 200 }),
+    );
+
+    const result = await scrapeTwitter("https://x.com/test/status/456");
+    expect(result!.content).toBe("My Article\n\nArticle body.");
+  });
+
   it("falls back to oEmbed when FxTwitter fails", async () => {
     const oembedResponse = {
       html: '<blockquote class="twitter-tweet"><p lang="en" dir="ltr">Hello world</p>&mdash; Test User (@test) <a href="https://twitter.com/test/status/123">Feb 19, 2026</a></blockquote>',
