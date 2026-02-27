@@ -6,6 +6,8 @@ import { createVoiceService } from "$lib/server/services/voice";
 import { createChatService } from "$lib/server/services/chat";
 import { getUserPreferredModel, calculateCost } from "$lib/server/models";
 import { env } from "$env/dynamic/private";
+import { sanitizePromptInput, wrapUserContent } from "$lib/server/prompt-safety";
+import { createPersonaService } from "$lib/server/services/persona";
 import type { RequestHandler } from "./$types";
 import type { VoiceProfile, VoicePattern } from "$lib/schemas/voice-profile";
 
@@ -121,6 +123,15 @@ export const POST: RequestHandler = async ({
     });
   }
 
+  if (body.topics.length > 10) {
+    return new Response("Maximum 10 topics allowed", { status: 400 });
+  }
+  if (body.topics.some((t) => typeof t !== "string" || t.length > 500)) {
+    return new Response("Each topic must be a string under 500 characters", {
+      status: 400,
+    });
+  }
+
   const apiKey =
     platform?.env?.ANTHROPIC_API_KEY ?? env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -135,6 +146,13 @@ export const POST: RequestHandler = async ({
   const db = await getDb(databaseUrl);
   const voiceService = createVoiceService(db);
   const chatService = createChatService(db);
+
+  // Ownership check — verify user owns this persona
+  const personaService = createPersonaService(db);
+  const persona = await personaService.getById(session.user.id, params.id);
+  if (!persona) {
+    return new Response("Not found", { status: 404 });
+  }
 
   const activeVersion = await voiceService.getActiveVersion(params.id);
   if (!activeVersion) {
@@ -167,7 +185,7 @@ Each reply MUST:
 
 ## Voice Profile
 ${voicePrompt}`,
-    prompt: `Generate sample replies for these topics:\n${body.topics.map((t, i) => `${i + 1}. ${t}`).join("\n")}`,
+    prompt: `Generate sample replies for these topics:\n${wrapUserContent("topic list", body.topics.slice(0, 10).map((t, i) => `${i + 1}. ${sanitizePromptInput(t, 200)}`).join("\n"))}`,
     onFinish: async ({ usage }) => {
       try {
         const inputTokens = usage.inputTokens ?? 0;
@@ -223,6 +241,13 @@ export const PUT: RequestHandler = async ({
     platform?.env?.DATABASE_URL ?? env.DATABASE_URL ?? "";
   const db = await getDb(databaseUrl);
   const voiceService = createVoiceService(db);
+
+  // Ownership check — verify user owns this persona
+  const personaService = createPersonaService(db);
+  const persona = await personaService.getById(session.user.id, params.id);
+  if (!persona) {
+    return new Response("Not found", { status: 404 });
+  }
 
   await voiceService.saveCalibrationRatings(params.id, body.ratings);
 

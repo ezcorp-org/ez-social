@@ -31,6 +31,12 @@ export const POST: RequestHandler = async ({
   const draftService = createDraftService(db);
   const queueService = createQueueService(db);
 
+  // Ownership check — verify user owns this post
+  const post = await queueService.getById(session.user.id, params.id!);
+  if (!post) {
+    return new Response("Not found", { status: 404 });
+  }
+
   const type = body.type as string | undefined;
 
   // ─── Feedback-only tracking (e.g. copy/accept) ─────────────────

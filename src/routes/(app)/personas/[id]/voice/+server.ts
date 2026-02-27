@@ -7,6 +7,8 @@ import { createChatService } from "$lib/server/services/chat";
 import { createDraftService } from "$lib/server/services/draft";
 import { getUserPreferredModel, calculateCost } from "$lib/server/models";
 import { env } from "$env/dynamic/private";
+import { sanitizePromptInput, wrapUserContent } from "$lib/server/prompt-safety";
+import { createPersonaService } from "$lib/server/services/persona";
 import type { RequestHandler } from "./$types";
 
 const ALLOWED_PLATFORMS = [
@@ -152,6 +154,13 @@ export const POST: RequestHandler = async ({
   const chatService = createChatService(db);
   const draftService = createDraftService(db);
 
+  // Ownership check — verify user owns this persona
+  const personaService = createPersonaService(db);
+  const persona = await personaService.getById(session.user.id, params.id);
+  if (!persona) {
+    return new Response("Not found", { status: 404 });
+  }
+
   // Save the new writing sample (only when providing new sample text)
   if (!skipNewSample && body.samples && body.platform) {
     await voiceService.saveSamples(params.id, body.samples, body.platform);
@@ -232,8 +241,9 @@ export const POST: RequestHandler = async ({
 
   // User refinement prompt (free-form instructions for voice profile update)
   if (userPrompt && userPrompt.trim()) {
+    const sanitized = sanitizePromptInput(userPrompt, 2000);
     feedbackSections.push(
-      `## User Refinement Instructions\nThe user has provided the following instructions for how their voice profile should be updated:\n\n"${userPrompt.trim()}"\n\nCarefully incorporate these instructions into the re-extracted voice profile. Adjust patterns, recommendations, and voice DNA to reflect what the user is asking for.`,
+      `## User Refinement Instructions\n${wrapUserContent("refinement instructions", sanitized)}\n\nCarefully incorporate these instructions into the re-extracted voice profile. Adjust patterns, recommendations, and voice DNA to reflect what the user is asking for.`,
     );
   }
 
@@ -324,6 +334,13 @@ export const PUT: RequestHandler = async ({
     platform?.env?.DATABASE_URL ?? env.DATABASE_URL ?? "";
   const db = await getDb(databaseUrl);
   const voiceService = createVoiceService(db);
+
+  // Ownership check — verify user owns this persona
+  const personaService = createPersonaService(db);
+  const persona = await personaService.getById(session.user.id, params.id);
+  if (!persona) {
+    return new Response("Not found", { status: 404 });
+  }
 
   // Get sample stats from existing samples (same as POST uses)
   const samples = await voiceService.getSamples(params.id);
