@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-17)
 Phase: 5 of 5 (Voice Calibration & Continuous Learning)
 Plan: 3 of 3 in current phase ✓
 Status: Complete
-Last activity: 2026-02-26 — Completed quick task 011: Allow users to manually edit their voice profile
+Last activity: 2026-03-01 — Completed quick task 012: Humanize button for drafts
 
 Progress: [████████████████] 100%
 
@@ -118,9 +118,10 @@ None.
 | 009 | Settings page with Integrations tab and theme | 2026-02-21 | 973458f | [009-settings-page-integrations-tab-theme](./quick/009-settings-page-integrations-tab-theme/) |
 | 010 | Token cost tracking per post | 2026-02-22 | 93045d9 | [010-token-cost-tracking-per-post](./quick/010-token-cost-tracking-per-post/) |
 | 011 | Allow users to manually edit their voice profile | 2026-02-26 | d5d1f00 | [011-allow-users-to-manually-edit-their-perso](./quick/011-allow-users-to-manually-edit-their-perso/) |
+| 012 | Humanize button for drafts | 2026-03-01 | c64405d | [012-humanize-button-for-drafts](./quick/012-humanize-button-for-drafts/) |
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Completed quick task 011: Allow users to manually edit their voice profile
+Last session: 2026-03-01
+Stopped at: Completed quick task 012: Humanize button for drafts
 Resume file: None
