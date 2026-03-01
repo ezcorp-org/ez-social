@@ -178,6 +178,42 @@ Before outputting any draft reply, verify:
 - Contains ZERO banned words/punctuation from the list above
 - Passes the "would I actually post this?" test`;
 
+interface VoiceContext {
+  voiceProfile: { extractedProfile: unknown; manualEdits: unknown } | null;
+  platformVoiceProfile?: {
+    extractedProfile: unknown;
+    manualEdits: unknown;
+    platform: string;
+  } | null;
+}
+
+/** Build voice profile section from voice + platform context. Shared by chat and humanize prompts. */
+function buildVoiceSection(
+  { voiceProfile, platformVoiceProfile }: VoiceContext,
+  instruction: string,
+): string | null {
+  const activeVoice = platformVoiceProfile ?? voiceProfile;
+  if (!activeVoice) return null;
+
+  const extracted =
+    (activeVoice.extractedProfile as Record<string, unknown>) ?? {};
+  const edits =
+    (activeVoice.manualEdits as Record<string, unknown>) ?? null;
+  const merged = edits ? deepMerge(extracted, edits) : extracted;
+
+  if (Object.keys(merged).length === 0) return null;
+
+  const platformNote = platformVoiceProfile
+    ? `\nUsing ${platformVoiceProfile.platform}-specific voice profile. Match this platform's style.`
+    : "";
+
+  const profileText = isNewSchema(merged)
+    ? formatVoiceProfile(merged)
+    : JSON.stringify(merged, null, 2);
+
+  return `## Voice Profile\n${instruction}:\n\n${profileText}${platformNote}`;
+}
+
 export function buildChatSystemPrompt(context: ChatPromptContext): string {
   const { post, persona, voiceProfile, platformVoiceProfile } = context;
 
@@ -199,29 +235,16 @@ export function buildChatSystemPrompt(context: ChatPromptContext): string {
 
   sections.push(`## Original Post\n${postParts.join("\n")}`);
 
-  // ── Voice profile (use platform-specific override when available) ──
-  const activeVoice = platformVoiceProfile ?? voiceProfile;
-  if (activeVoice) {
-    const extracted =
-      (activeVoice.extractedProfile as Record<string, unknown>) ?? {};
-    const edits =
-      (activeVoice.manualEdits as Record<string, unknown>) ?? null;
-    const merged = edits ? deepMerge(extracted, edits) : extracted;
-
-    if (Object.keys(merged).length > 0) {
-      const platformNote = platformVoiceProfile
-        ? `\nUsing ${platformVoiceProfile.platform}-specific voice profile. Match this platform's style.`
-        : "";
-
-      let voiceSection: string;
-      if (isNewSchema(merged)) {
-        voiceSection = `## Voice Profile\nWhen generating draft replies, match these voice characteristics:\n\n${formatVoiceProfile(merged)}${platformNote}\n\nUse this voice profile to shape the tone, vocabulary, sentence structure, and style of draft replies. When simply discussing the post (not drafting), converse naturally.`;
-      } else {
-        // Legacy flat schema — dump as JSON for backward compatibility
-        voiceSection = `## Voice Profile\nWhen generating draft replies, match these voice characteristics:\n${JSON.stringify(merged, null, 2)}${platformNote}\n\nUse this voice profile to shape the tone, vocabulary, sentence structure, and style of draft replies. When simply discussing the post (not drafting), converse naturally.`;
-      }
-      sections.push(voiceSection);
-    }
+  // ── Voice profile ──
+  const voiceSection = buildVoiceSection(
+    { voiceProfile, platformVoiceProfile },
+    "When generating draft replies, match these voice characteristics",
+  );
+  if (voiceSection) {
+    sections.push(
+      voiceSection +
+        "\n\nUse this voice profile to shape the tone, vocabulary, sentence structure, and style of draft replies. When simply discussing the post (not drafting), converse naturally.",
+    );
   }
 
   // ── Reply rules ──
@@ -240,6 +263,61 @@ export function buildChatSystemPrompt(context: ChatPromptContext): string {
   sections.push(
     `## Behavior\n- Be responsive to both discussion requests and draft requests — no rigid flow.\n- When asked to refine a draft ("make it shorter", "more casual"), generate a new <draft> block with the updated version.\n- ${platformHint}\n- When the user wants to explore angles or discuss the post, respond conversationally without draft markers.\n- Prioritize replies that make the original author want to respond back. Agreement with added value drives more engagement than contradiction.`,
   );
+
+  return sections.join("\n\n");
+}
+
+// @ts-ignore — Vite ?raw import
+import humanizerPromptRaw from "../../prompts/humanizer.prompt.md?raw";
+
+/** Strip YAML frontmatter (--- ... ---) from markdown content. */
+function stripFrontmatter(md: string): string {
+  return md.replace(/^---[\s\S]*?---\s*/, "");
+}
+
+const baseHumanizerPrompt = stripFrontmatter(humanizerPromptRaw);
+
+interface HumanizePromptContext {
+  platform: string | null;
+  personaName: string | null;
+  voiceProfile: { extractedProfile: unknown; manualEdits: unknown } | null;
+  platformVoiceProfile?: {
+    extractedProfile: unknown;
+    manualEdits: unknown;
+    platform: string;
+  } | null;
+}
+
+/**
+ * Build system prompt for the humanize endpoint.
+ * Combines the humanizer prompt with the user's voice profile and platform context
+ * so the rewritten text sounds like *them*, not generic.
+ */
+export function buildHumanizeSystemPrompt(context: HumanizePromptContext): string {
+  const sections: string[] = [baseHumanizerPrompt];
+
+  // Voice profile — rewrite should match their voice, not just remove AI-isms
+  const voiceSection = buildVoiceSection(
+    { voiceProfile: context.voiceProfile, platformVoiceProfile: context.platformVoiceProfile },
+    "After removing AI patterns, rewrite the text to match these voice characteristics",
+  );
+  if (voiceSection) {
+    sections.push(voiceSection);
+  }
+
+  // Platform context
+  if (context.platform) {
+    sections.push(
+      `## Platform Context\nThis text is for ${context.platform}. Keep the tone and length appropriate for this platform.`,
+    );
+  }
+
+  // Persona hint
+  if (context.personaName) {
+    sections.push(
+      `## Persona\nThe writer's persona is "${context.personaName}". The rewritten text should sound like this person.`,
+    );
+  }
 
   return sections.join("\n\n");
 }

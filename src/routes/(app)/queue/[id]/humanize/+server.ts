@@ -2,20 +2,14 @@ import { generateText } from "ai";
 import { getAIModel } from "$lib/server/ai";
 import { getDb } from "$lib/server/db";
 import { createQueueService } from "$lib/server/services/queue";
+import { createPersonaService } from "$lib/server/services/persona";
+import { createVoiceService } from "$lib/server/services/voice";
 import { createDraftService } from "$lib/server/services/draft";
 import { createChatService } from "$lib/server/services/chat";
+import { buildHumanizeSystemPrompt } from "$lib/server/chat-prompt";
 import { getUserPreferredModel, calculateCost } from "$lib/server/models";
 import { env } from "$env/dynamic/private";
 import type { RequestHandler } from "@sveltejs/kit";
-// @ts-ignore — Vite ?raw import
-import humanizerPromptRaw from "../../../../../prompts/humanizer.prompt.md?raw";
-
-/** Strip YAML frontmatter (--- ... ---) from markdown content. */
-function stripFrontmatter(md: string): string {
-  return md.replace(/^---[\s\S]*?---\s*/, "");
-}
-
-const systemPrompt = stripFrontmatter(humanizerPromptRaw);
 
 export const POST: RequestHandler = async ({
   request,
@@ -47,6 +41,8 @@ export const POST: RequestHandler = async ({
     platform?.env?.DATABASE_URL ?? env.DATABASE_URL ?? "";
   const db = await getDb(databaseUrl);
   const queueService = createQueueService(db);
+  const personaService = createPersonaService(db);
+  const voiceService = createVoiceService(db);
   const draftService = createDraftService(db);
   const chatService = createChatService(db);
 
@@ -54,6 +50,38 @@ export const POST: RequestHandler = async ({
   const post = await queueService.getById(userId, params.id!);
   if (!post) {
     return new Response("Not found", { status: 404 });
+  }
+
+  // Load persona + voice profile (same pattern as chat endpoint)
+  let personaName: string | null = null;
+  let voiceProfile: { extractedProfile: unknown; manualEdits: unknown } | null = null;
+  let platformVoiceProfile: { extractedProfile: unknown; manualEdits: unknown; platform: string } | null = null;
+
+  if (post.personaId) {
+    const persona = await personaService.getById(userId, post.personaId);
+    if (persona) personaName = persona.name;
+
+    const activeVersion = await voiceService.getActiveVersion(post.personaId);
+    if (activeVersion) {
+      voiceProfile = {
+        extractedProfile: activeVersion.extractedProfile,
+        manualEdits: activeVersion.manualEdits,
+      };
+    }
+
+    if (post.platform) {
+      const platformVersion = await voiceService.getActiveVersionForPlatform(
+        post.personaId,
+        post.platform,
+      );
+      if (platformVersion && platformVersion.platform) {
+        platformVoiceProfile = {
+          extractedProfile: platformVersion.extractedProfile,
+          manualEdits: platformVersion.manualEdits,
+          platform: platformVersion.platform,
+        };
+      }
+    }
   }
 
   const apiKey =
@@ -67,6 +95,13 @@ export const POST: RequestHandler = async ({
 
   const modelId = await getUserPreferredModel(db, userId);
   const model = getAIModel(apiKey, modelId);
+
+  const systemPrompt = buildHumanizeSystemPrompt({
+    platform: post.platform,
+    personaName,
+    voiceProfile,
+    platformVoiceProfile,
+  });
 
   try {
     const result = await generateText({
