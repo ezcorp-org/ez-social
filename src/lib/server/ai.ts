@@ -112,8 +112,17 @@ function extractPromptText(
 /**
  * Detect what kind of response to return based on the prompt/system content.
  */
+/**
+ * Canned humanized text for the humanizer endpoint mock.
+ */
+const MOCK_HUMANIZED_TEXT =
+  "This is a humanized version of the draft. The AI patterns have been removed and it reads more naturally now.";
+
 function pickMockResponse(system: string, user: string): string {
   const combined = `${system} ${user}`.toLowerCase();
+  if (combined.includes("humanize") || combined.includes("ai writing patterns") || combined.includes("remove ai writing")) {
+    return MOCK_HUMANIZED_TEXT;
+  }
   if (combined.includes("voice") || combined.includes("writing samples")) {
     return MOCK_VOICE_PROFILE;
   }

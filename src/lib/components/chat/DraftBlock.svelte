@@ -23,6 +23,8 @@
   let localEditText = $state<string | null>(null);
   let saveError = $state<string | null>(null);
   let showOriginal = $state(false);
+  let isHumanizing = $state(false);
+  let humanizeError = $state<string | null>(null);
 
   // The text to display: local edit > saved edit > original
   const displayText = $derived(localEditText ?? savedEditText ?? text);
@@ -93,6 +95,37 @@
     saveError = null;
   }
 
+  async function humanize() {
+    isHumanizing = true;
+    humanizeError = null;
+
+    try {
+      const res = await fetch(`/queue/${postId}/humanize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, draftText: displayText }),
+      });
+
+      if (!res.ok) {
+        const msg = await res.text();
+        humanizeError = msg || "Failed to humanize";
+        return;
+      }
+
+      const data = await res.json();
+      localEditText = data.humanizedText;
+      hasBeenEdited = true;
+      onEdit?.(data.humanizedText);
+    } catch {
+      humanizeError = "Network error — could not humanize";
+    } finally {
+      isHumanizing = false;
+      if (humanizeError) {
+        setTimeout(() => (humanizeError = null), 4000);
+      }
+    }
+  }
+
   async function saveEdit() {
     if (!editText.trim() || editText === text) {
       saveError = "Edit must differ from the original text";
@@ -149,6 +182,13 @@
           Edit
         </button>
         <button
+          onclick={humanize}
+          disabled={isHumanizing}
+          class="rounded px-2 py-0.5 text-xs font-medium text-draft-text hover:bg-draft-border/30 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isHumanizing ? "Humanizing\u2026" : "Humanize"}
+        </button>
+        <button
           onclick={copyToClipboard}
           class="rounded px-2 py-0.5 text-xs font-medium {copied ? 'text-status-success-text' : 'text-draft-text hover:bg-draft-border/30'}"
         >
@@ -202,6 +242,10 @@
         </div>
       {/if}
     {/if}
+  {/if}
+
+  {#if humanizeError}
+    <p class="mt-1 text-xs text-status-danger-text">{humanizeError}</p>
   {/if}
 
   <div class="mt-2 text-xs text-faint">

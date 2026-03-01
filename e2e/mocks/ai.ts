@@ -41,6 +41,22 @@ export async function interceptChatWithDraft(page: Page, draftText: string) {
 }
 
 /**
+ * Mock the humanize endpoint to return a canned humanized text.
+ */
+export async function interceptHumanizeEndpoint(
+  page: Page,
+  humanizedText = "This is a humanized version of the draft. The AI patterns have been removed and it reads more naturally now.",
+) {
+  await page.route("**/queue/*/humanize", async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ humanizedText }),
+    });
+  });
+}
+
+/**
  * Mock the drafts endpoint so edit/feedback requests succeed
  * even when the chat message doesn't exist in the DB.
  */
